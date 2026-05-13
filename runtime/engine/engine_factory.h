@@ -29,6 +29,7 @@
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
 #include "runtime/engine/engine.h"
+#include "runtime/engine/cpu_affinity_utils.h"
 #include "runtime/engine/engine_settings.h"
 #include "runtime/executor/executor_settings_base.h"
 
@@ -132,6 +133,14 @@ class EngineFactory {
   static absl::StatusOr<std::unique_ptr<Engine>> Create(
       EngineType engine_type, EngineSettings settings,
       absl::string_view input_prompt_as_hint = "") {
+    if (IsPixelTensorDevice()) {
+      auto cores = GetPixelPerformanceCores();
+      auto status = SetCpuAffinity(cores);
+      if (!status.ok()) {
+        ABSL_LOG(WARNING) << "Failed to set CPU affinity: " << status;
+      }
+    }
+
     auto& instance = Instance();
     auto it = instance.registry_.find(engine_type);
     if (it == instance.registry_.end()) {
