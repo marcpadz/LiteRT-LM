@@ -30,11 +30,13 @@
 #include <sys/stat.h>
 #endif
 
+#include "absl/base/no_destructor.h"  // from @com_google_absl
 #include "absl/status/status.h"  // from @com_google_absl
 #include "absl/status/statusor.h"  // from @com_google_absl
 #include "absl/strings/match.h"  // from @com_google_absl
 #include "absl/strings/str_cat.h"  // from @com_google_absl
 #include "absl/strings/string_view.h"  // from @com_google_absl
+#include "absl/synchronization/mutex.h"  // from @com_google_absl
 
 namespace litert::lm {
 
@@ -95,10 +97,14 @@ absl::string_view Dirname(absl::string_view path) {
 absl::StatusOr<std::string> GetFileCacheIdentifier(absl::string_view path) {
   static auto* cached_identifiers =
       new std::unordered_map<std::string, std::string>();
+  static absl::NoDestructor<absl::Mutex> cached_identifiers_mutex;
   std::string path_str(path);
-  if (auto it = cached_identifiers->find(path_str);
-      it != cached_identifiers->end()) {
-    return it->second;
+  {
+    absl::MutexLock lock(cached_identifiers_mutex.get());
+    if (auto it = cached_identifiers->find(path_str);
+        it != cached_identifiers->end()) {
+      return it->second;
+    }
   }
 
   std::error_code ec;
@@ -130,7 +136,10 @@ absl::StatusOr<std::string> GetFileCacheIdentifier(absl::string_view path) {
       std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 
   std::string identifier = absl::StrCat(seconds, "_", size);
-  (*cached_identifiers)[path_str] = identifier;
+  {
+    absl::MutexLock lock(cached_identifiers_mutex.get());
+    (*cached_identifiers)[path_str] = identifier;
+  }
   return identifier;
 }
 
