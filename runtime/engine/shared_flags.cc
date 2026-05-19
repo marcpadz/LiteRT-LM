@@ -58,7 +58,8 @@ ABSL_FLAG(bool, benchmark, false, "Benchmark the LLM execution.");
 ABSL_FLAG(int, benchmark_prefill_tokens, 0,
           "If benchmark is true and the value is larger than 0, the benchmark "
           "will use this number to set the number of prefill tokens "
-          "(regardless of the input prompt).");
+          "(regardless of the input prompt). For better performance, a number "
+          "of multiple of 128 is recommended, like 1024.");
 ABSL_FLAG(int, benchmark_decode_tokens, 0,
           "If benchmark is true and the value is larger than 0, the benchmark "
           "will use this number to set the number of decode steps (regardless "
