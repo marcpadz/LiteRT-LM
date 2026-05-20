@@ -560,12 +560,23 @@ LiteRtLmSession* litert_lm_engine_create_session(
   if (!engine || !engine->engine) {
     return nullptr;
   }
-  absl::StatusOr<std::unique_ptr<Engine::Session>> session;
-  if (config && config->config) {
-    session = engine->engine->CreateSession(*config->config);
-  } else {
-    session = engine->engine->CreateSession(SessionConfig::CreateDefault());
+
+  SessionConfig session_config = config && config->config
+                                     ? *config->config
+                                     : SessionConfig::CreateDefault();
+  if (engine->engine->GetEngineSettings()
+          .GetAudioExecutorSettings()
+          .has_value()) {
+    session_config.SetAudioModalityEnabled(true);
   }
+  if (engine->engine->GetEngineSettings()
+          .GetVisionExecutorSettings()
+          .has_value()) {
+    session_config.SetVisionModalityEnabled(true);
+  }
+
+  absl::StatusOr<std::unique_ptr<Engine::Session>> session =
+      engine->engine->CreateSession(session_config);
   if (!session.ok()) {
     ABSL_LOG(ERROR) << "Failed to create session: " << session.status();
     return nullptr;
@@ -939,9 +950,21 @@ LiteRtLmConversation* litert_lm_conversation_create(
     }
 
     auto builder = litert::lm::ConversationConfig::Builder();
-    if (c_config->session_config) {
-      builder.SetSessionConfig(*c_config->session_config);
+    SessionConfig session_config = c_config->session_config
+                                       ? *c_config->session_config
+                                       : SessionConfig::CreateDefault();
+    if (engine->engine->GetEngineSettings()
+            .GetAudioExecutorSettings()
+            .has_value()) {
+      session_config.SetAudioModalityEnabled(true);
     }
+    if (engine->engine->GetEngineSettings()
+            .GetVisionExecutorSettings()
+            .has_value()) {
+      session_config.SetVisionModalityEnabled(true);
+    }
+    builder.SetSessionConfig(session_config);
+
     builder.SetPreface(json_preface);
     builder.SetEnableConstrainedDecoding(c_config->enable_constrained_decoding);
     builder.SetFilterChannelContentFromKvCache(
