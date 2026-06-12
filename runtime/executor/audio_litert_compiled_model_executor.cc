@@ -1112,6 +1112,11 @@ AudioLiteRtCompiledModelExecutor::AudioStreamingEncoder::RestoreContext(
                                 ReferTensorBufferAsSpan<float>(buffer));
         LITERT_RETURN_IF_ERROR(
             input_buffers_map_[name].Write<float>(data_span));
+      } else if (tensor_type.ElementType() == ElementType::Float16) {
+        LITERT_ASSIGN_OR_RETURN(auto data_span,
+                                ReferTensorBufferAsSpan<tflite::half>(buffer));
+        LITERT_RETURN_IF_ERROR(
+            input_buffers_map_[name].Write<tflite::half>(data_span));
       } else if (tensor_type.ElementType() == ElementType::Bool) {
         LITERT_ASSIGN_OR_RETURN(auto data_span,
                                 ReferTensorBufferAsSpan<bool>(buffer));
